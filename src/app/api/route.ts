@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFrameHtmlResponse } from '@coinbase/onchainkit/frame';
 import { NEXT_PUBLIC_URL } from '../config';
 
-const BASE_BUILDS_COMMUNITY_ID = '1'; // Replace with actual Base Builds community ID
+interface Round {
+  id: string;
+  name: string;
+}
+
+interface Submission {
+  fid: string;
+  reward: number;
+}
+
+const BASE_BUILDS_COMMUNITY_ID = '1';
 
 async function fetchRounds() {
   const response = await fetch(`https://rounds.wtf/api/public/v1/communities/${BASE_BUILDS_COMMUNITY_ID}/rounds`);
@@ -10,13 +20,13 @@ async function fetchRounds() {
   return response.json();
 }
 
-async function fetchUserSubmissions(fid: string, rounds: any[]) {
-  const submissions = [];
+async function fetchUserSubmissions(fid: string, rounds: Round[]): Promise<Submission[]> {
+  const submissions: Submission[] = [];
   for (const round of rounds) {
     const response = await fetch(`https://rounds.wtf/api/public/v1/rounds/${round.id}/submissions`);
     if (!response.ok) continue;
-    const roundSubmissions = await response.json();
-    submissions.push(...roundSubmissions.filter((sub: any) => sub.fid === fid));
+    const roundSubmissions: Submission[] = await response.json();
+    submissions.push(...roundSubmissions.filter((sub: Submission) => sub.fid === fid));
   }
   return submissions;
 }
@@ -42,7 +52,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const submissions = await fetchUserSubmissions(fid, rounds);
 
     const totalParticipations = submissions.length;
-    const rewards = submissions.map((sub: any) => sub.reward || 0);
+    const rewards = submissions.map((sub: Submission) => sub.reward || 0);
     const totalRewards = rewards.reduce((a: number, b: number) => a + b, 0);
     const highestReward = Math.max(...rewards, 0);
     const lowestReward = rewards.length ? Math.min(...rewards) : 0;
